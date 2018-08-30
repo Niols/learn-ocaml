@@ -55,6 +55,12 @@ type _ request =
   | Tutorial_index: unit -> Tutorial.Index.t request
   | Tutorial: string -> Tutorial.t request
 
+  | Focused_skills_index: unit -> Exercise.Skill.t request
+  | Focusing_skill: string -> (Exercise.id list) request
+
+  | Required_skills_index: unit -> Exercise.Skill.t request
+  | Requiring_skill: string -> (Exercise.id list) request
+
   | Exercise_status_index:
       teacher token -> Exercise.Status.t list request
   | Exercise_status:

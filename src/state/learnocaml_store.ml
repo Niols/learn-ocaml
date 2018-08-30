@@ -103,11 +103,48 @@ module Exercise = struct
         read_static_file Learnocaml_index.exercise_index_path Exercise.Index.enc
       ))
 
+  let focus_index =
+    ref (lazy (
+        read_static_file Learnocaml_index.focus_path Exercise.Skill.enc
+      ))
+  let requirements_index =
+    ref (lazy (
+        read_static_file Learnocaml_index.requirements_path Exercise.Skill.enc
+      ))
+
   module Meta = struct
     include Exercise.Meta
 
     let get id =
       Lazy.force !index >|= fun index -> Exercise.Index.find index id
+  end
+
+  module Skill = struct
+    include Exercise.Skill
+
+    let get_focus_index () =
+      Lazy.force !focus_index
+    let get_requirements_index () =
+      Lazy.force !requirements_index
+
+    let reload_focus_index () =
+      read_static_file Learnocaml_index.focus_path Exercise.Skill.enc
+      >|= fun i -> focus_index := lazy (Lwt.return i)
+    let reload_requirements_index () =
+      read_static_file Learnocaml_index.requirements_path Exercise.Skill.enc
+      >|= fun i -> requirements_index := lazy (Lwt.return i)
+
+    let get_focused id =
+      Lazy.force !focus_index >|= fun focus_index ->
+      match SMap.find_opt id focus_index with
+      | None -> []
+      | Some l -> l
+
+    let get_required id =
+      Lazy.force !requirements_index >|= fun requirements_index ->
+      match SMap.find_opt id requirements_index with
+      | None -> []
+      | Some l -> l
   end
 
   module Index = struct
@@ -179,6 +216,7 @@ module Exercise = struct
   include (Exercise: module type of struct include Exercise end
            with type id := id
             and module Meta := Meta
+            and module Skill := Skill
             and module Status := Status
             and module Index := Index)
 
@@ -310,40 +348,40 @@ module Student = Learnocaml_data.Student
 
 
 (* struct
- * 
+ *
  *   type tag = string
- * 
+ *
  *   type token = Token.t
- * 
+ *
  *   type t = {
  *     token: token;
  *     nickname: string;
  *     exercises: Learnocaml_exercise_state.exercise_state SMap.t;
  *     tags: tag list;
  *   }
- * 
+ *
  *   module T = struct
  *     type nonrec t = t
  *     let compare a b = compare a.token b.token
  *   end
- * 
+ *
  *   module Set = Set.Make(T)
- * 
+ *
  *   let all: (token, t) Hashtbl.t = Hashtbl.create 223
  * end *)
 
 (* module Teacher: sig
- * 
+ *
  *   type token = Token.t
- * 
+ *
  *   type t = {
  *     token: token;
  *     nickname: string;
  *     students: Student.set;
  *   }
- * 
+ *
  *   let all: (token, t) Hashtbl.t = Hashtbl.create 71
  * end
- * 
+ *
  * let init ~exercise_index =
  *   Exercise.load exercise_index *)
