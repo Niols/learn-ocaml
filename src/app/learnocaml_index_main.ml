@@ -611,6 +611,7 @@ let teacher_tab token _select _params () =
   let exercises_index = ref (Exercise.Index.Exercises []) in
   let students_map = ref Token.Map.empty in
   let assignments_tbl = Hashtbl.create 59 in
+  let skills_index = ref ((SMap.empty, SMap.empty) : Exercise.Skill.t * Exercise.Skill.t) in
   (* let students_changes = ref Token.Map.empty in -- TODO *)
   let status_map = ref SMap.empty in
   let (status_changes: ES.t SMap.t ref) = ref SMap.empty in
@@ -800,6 +801,40 @@ let teacher_tab token _select _params () =
     in
     Manip.replaceChildren students_list_div [H.table table]
   in
+  let skills_list_div =
+    H.div ~a:[H.a_id "skill_list"] [H.pcdata [%i"Loading..."]]
+  in
+  let skills_div =
+    let legend =
+      H.legend ~a:[
+        H.a_onclick (fun _ ->
+            (* TODO: Select all skills and derive a set of exercises *)
+            true
+          );
+      ] [H.pcdata [%i"Skills"]]
+    in
+    H.div ~a:[H.a_id "skills_pane"; H.a_class ["skills_pane"]] [
+      H.div ~a:[H.a_id "skills_filter_box"] [
+        (* TODO: filtering tools (if necessary for skills?) *)
+      ];
+      H.fieldset ~legend [ skills_list_div ];
+    ]
+  in
+  let skill_line_id id = "skill_line_"^id in
+  let skill_line id exs =
+    H.tr ~a:[
+      H.a_id (skill_line_id id);
+      H.a_class ["skill_line"];
+    ] [ H.td [ H.pcdata id ] ;
+        H.td (List.map H.pcdata exs)
+      ]
+  in
+  let fill_skills_pane () =
+    let table =
+      SMap.fold (fun id exs acc ->
+          skill_line id exs :: acc) (fst !skills_index) [] in
+    Manip.replaceChildren skills_list_div [H.table table];
+  in
 
   let assignment_line id =
     let selected = !selected_assignment = Some id in
@@ -838,6 +873,7 @@ let teacher_tab token _select _params () =
           ();
       ]
     in
+
     (* let switch_autobox ~current_mode mode1 mode2 =
      *   let switch = ref current_mode in
      *   let next () = switch := not !switch in
@@ -1508,6 +1544,7 @@ let teacher_tab token _select _params () =
     H.div ~a: [H.a_id "learnocaml-main-teacher"] [
       exercises_div;
       students_div;
+      skills_div;
       control_div;
       actions_div;
     ]
@@ -1532,12 +1569,20 @@ let teacher_tab token _select _params () =
       List.fold_left (fun m st -> Token.Map.add st.Student.token st m)
         Token.Map.empty students
   in
+  let fetch_skills =
+    Server_caller.request_exn (Learnocaml_api.Focused_skills_index ())
+    >>= fun focus ->
+    Server_caller.request_exn (Learnocaml_api.Required_skills_index ())
+    >|= fun requirements ->
+    skills_index := focus, requirements
+  in
   let content_div = find_component "learnocaml-main-content" in
   Manip.appendChild content_div div;
-  Lwt.join [fetch_exercises; fetch_stats; fetch_students] >>= fun () ->
+  Lwt.join [fetch_exercises; fetch_stats; fetch_students; fetch_skills] >>= fun () ->
   fill_exercises_pane ();
   fill_students_pane ();
   fill_control_div ();
+  fill_skills_pane ();
   Lwt.return div
 
 let token_input_field () =
