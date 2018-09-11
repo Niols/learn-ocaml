@@ -145,9 +145,22 @@ module Exercise: sig
 
   module Skill : sig
 
-    type t = (string list) SMap.t
+    type skill = string
+
+    type t = (id list) SMap.t
 
     val enc : t Json_encoding.encoding
+
+    module Skill_tree : sig
+
+      type kind = Skill of skill | Backward of id | Forward of id
+
+      type node = Node of id * (node * kind) list
+
+      val compute_skill_tree :
+        ?depth:int -> skill -> (id * Meta.t) list -> (t * t) -> (node * kind) list
+
+    end
 
   end
 
@@ -192,24 +205,24 @@ module Exercise: sig
     val three_way_merge:
       ancestor:t -> theirs:t -> ours:t -> t
 
-    (* val 
+    (* val
      *   ((float * float) * Token.Set.t) list -> assignments *)
 
     (* val is_automatic:
      *   assignments -> bool
-     * 
+     *
      * val is_open_assignment:
      *   Token.t -> assignments -> [> `Closed | `Deadline of float]
-     * 
+     *
      * val default_assignment:
      *   assignments -> assignment
-     * 
+     *
      * val exists_assignment:
      *   assignments -> (Token.t -> assignment -> bool) -> bool
-     * 
+     *
      * val fold_over_assignments:
      *   assignments -> (Token.t -> assignment -> 'a -> 'a) -> 'a -> 'a
-     * 
+     *
      * val token_map_of_assignments:
      *   assignments -> assignment Token.Map.t *)
 
